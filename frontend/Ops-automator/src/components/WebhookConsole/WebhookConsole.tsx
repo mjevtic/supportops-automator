@@ -70,13 +70,32 @@ const WebhookConsole = () => {
       }
       
       const API_URL = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${API_URL}/trigger/${platform}`, {
+      const requestUrl = `${API_URL}/trigger/${platform}`;
+      
+      // Add log entry for request URL
+      const urlTimestamp = new Date().toISOString();
+      setLogs(prev => [...prev, `[${urlTimestamp}] Request URL: ${requestUrl}`]);
+      
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: payload
       });
+      
+      // Log response status
+      const statusTimestamp = new Date().toISOString();
+      setLogs(prev => [...prev, `[${statusTimestamp}] Response status: ${response.status} ${response.statusText}`]);
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        const errorTimestamp = new Date().toISOString();
+        setLogs(prev => [...prev, `[${errorTimestamp}] Non-JSON response received: ${textResponse.substring(0, 100)}...`]);
+        throw new Error('Server did not return JSON. Check the backend URL and CORS settings.');
+      }
       
       const data = await response.json();
       

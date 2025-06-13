@@ -21,6 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(rules_router, prefix="/rules", tags=["rules"])
+app.include_router(webhook_router, tags=["webhooks"])
+
 @app.on_event("startup")
 async def on_startup():
     await init_db()
