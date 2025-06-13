@@ -45,10 +45,10 @@ def load_trigger_module(name: str):
 
 def load_action_module(name: str):
     if name == "slack":
-        from backend.modules.slack.action import execute_action
+        from modules.slack.action import execute_action
         return execute_action
     if name == "trello":
-        from backend.modules.trello.action import execute_action
+        from modules.trello.action import execute_action
         return execute_action
     # Add more action modules here as needed
     raise ValueError(f"Unknown action module: {name}")

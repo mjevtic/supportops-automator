@@ -1,7 +1,8 @@
-from backend.models.rule import Rule
-from backend.services.rule_engine import process_rule
-import asyncio
+import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from models.rule import Rule
+from services.rule_engine import process_rule
+import asyncio
 
 if __name__ == "__main__":
     rule = Rule(
