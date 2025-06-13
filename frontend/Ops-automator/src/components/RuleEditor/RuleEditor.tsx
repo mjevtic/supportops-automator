@@ -208,8 +208,12 @@ const RuleEditor = () => {
       const API_URL = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${API_URL}/rules`, {
         method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
           name: rule.name || 'New Rule',
