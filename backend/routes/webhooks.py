@@ -33,7 +33,34 @@ async def zendesk_trigger(request: Request, session: AsyncSession = Depends(get_
             expected_tag = rule_data.get("tag")
             if expected_tag in tags:
                 print(f"[Webhook] Trigger match: rule {rule.id}, tag '{expected_tag}'")
-                await process_rule(rule)
+                await rule_engine.process_rule(rule)
+        except Exception as e:
+            print(f"[Webhook] Failed to evaluate rule {rule.id}:", e)
+
+    return {"status": "processed"}
+
+@router.post("/trigger/freshdesk")
+async def freshdesk_trigger(request: Request, session: AsyncSession = Depends(get_session)):
+    payload = await request.json()
+    print("[Webhook] Received Freshdesk payload:", payload)
+
+    tags = payload.get("ticket", {}).get("tags", [])
+    if not tags:
+        return {"status": "ignored", "reason": "No tags in payload"}
+
+    result = await session.execute(select(Rule).where(
+        Rule.trigger_platform == "freshdesk",
+        Rule.trigger_event == "ticket_tag_added"
+    ))
+    rules = result.scalars().all()
+
+    for rule in rules:
+        try:
+            rule_data = json.loads(rule.trigger_data)
+            expected_tag = rule_data.get("tag")
+            if expected_tag in tags:
+                print(f"[Webhook] Trigger match: rule {rule.id}, tag '{expected_tag}'")
+                await rule_engine.process_rule(rule)
         except Exception as e:
             print(f"[Webhook] Failed to evaluate rule {rule.id}:", e)
 

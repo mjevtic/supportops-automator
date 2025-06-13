@@ -10,6 +10,18 @@ def load_action_module(name: str):
     if name == "trello":
         from modules.trello.action import execute_action
         return execute_action
+    if name == "google_sheets":
+        from modules.google_sheets.action import execute_action
+        return execute_action
+    if name == "notion":
+        from modules.notion.action import execute_action
+        return execute_action
+    if name == "linear":
+        from modules.linear.action import execute_action
+        return execute_action
+    if name == "discord":
+        from modules.discord.action import execute_action
+        return execute_action
     # Add more action modules here as needed
     raise ValueError(f"Unknown action module: {name}")
 
