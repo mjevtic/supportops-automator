@@ -24,14 +24,18 @@ async def create_integration(
 
 @router.get("/integrations", response_model=List[IntegrationRead])
 async def get_integrations(
-    user_id: int,
+    user_id: int = None,
     integration_type: str = None,
     session: AsyncSession = Depends(get_session)
 ):
     """Get all integrations for a user, optionally filtered by type"""
     repository = IntegrationRepository(session)
     
-    if integration_type:
+    # For now, if no user_id is provided, return all integrations
+    # In a real production app, you'd use authentication to get the current user
+    if user_id is None:
+        integrations = await repository.get_all_integrations()
+    elif integration_type:
         integrations = await repository.get_integrations_by_type(user_id, integration_type)
     else:
         integrations = await repository.get_integrations_by_user(user_id)
@@ -93,7 +97,7 @@ async def test_integration(
     integration_id: int,
     session: AsyncSession = Depends(get_session)
 ):
-    """Test an integration's connectivity"""
+    """Test an existing integration's connectivity"""
     repository = IntegrationRepository(session)
     integration = await repository.get_integration(integration_id)
     
@@ -105,37 +109,55 @@ async def test_integration(
     
     # Get decrypted config
     config = repository.get_decrypted_config(integration)
+    integration_type = integration.integration_type
     
+    return await test_integration_connection(integration_type, config)
+
+
+from pydantic import BaseModel
+
+class TestConnectionRequest(BaseModel):
+    integration_type: str
+    config: dict
+
+@router.post("/integrations/test", status_code=status.HTTP_200_OK)
+async def test_integration_config(request: TestConnectionRequest):
+    """Test an integration configuration without saving it"""
+    return await test_integration_connection(request.integration_type, request.config)
+
+
+async def test_integration_connection(integration_type: str, config: dict):
+    """Helper function to test integration connection"""
     # Import the appropriate module based on integration type
     try:
-        if integration.integration_type == "zendesk":
+        if integration_type == "zendesk":
             from modules.zendesk.actions import test_connection
-        elif integration.integration_type == "freshdesk":
+        elif integration_type == "freshdesk":
             from modules.freshdesk.actions import test_connection
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported integration type: {integration.integration_type}"
+                detail=f"Unsupported integration type: {integration_type}"
             )
         
         # Test the connection
         result = test_connection(config)
         
         if result.get("success"):
-            return {"status": "success", "message": "Connection successful"}
+            return {"success": True, "message": "Connection successful"}
         else:
             return {
-                "status": "error", 
+                "success": False, 
                 "message": result.get("message", "Connection failed")
             }
     
     except ImportError:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail=f"Integration module for {integration.integration_type} not implemented"
+            detail=f"Integration module for {integration_type} not implemented"
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error testing connection: {str(e)}"
-        )
+        return {
+            "success": False,
+            "message": f"Error testing connection: {str(e)}"
+        }

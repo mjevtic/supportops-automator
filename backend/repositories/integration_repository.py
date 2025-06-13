@@ -51,6 +51,13 @@ class IntegrationRepository:
         result = await self.session.execute(query)
         integrations = result.scalars().all()
         return list(integrations)
+        
+    async def get_all_integrations(self) -> List[Integration]:
+        """Get all integrations in the system"""
+        query = select(Integration)
+        result = await self.session.execute(query)
+        integrations = result.scalars().all()
+        return list(integrations)
     
     async def update_integration(self, integration_id: int, integration_data: IntegrationUpdate) -> Optional[Integration]:
         """Update an integration"""

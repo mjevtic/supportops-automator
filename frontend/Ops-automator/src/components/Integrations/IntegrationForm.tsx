@@ -122,19 +122,16 @@ const IntegrationForm = () => {
         })
       });
       
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
-      if (response.ok && data.success) {
-        setTestResult({
-          success: true,
-          message: 'Connection successful!'
-        });
-      } else {
-        setTestResult({
-          success: false,
-          message: data.message || 'Connection failed. Please check your credentials.'
-        });
-      }
+      setTestResult({
+        success: data.success,
+        message: data.message || (data.success ? 'Connection successful!' : 'Connection failed. Please check your credentials.')
+      });
     } catch (err) {
       setTestResult({
         success: false,
@@ -157,12 +154,19 @@ const IntegrationForm = () => {
         ? `${API_URL}/integrations/${id}` 
         : `${API_URL}/integrations`;
       
+      // For demo purposes, we're using a fixed user ID
+      // In a real app, this would come from authentication
+      const dataToSubmit = {
+        ...formData,
+        user_id: 1 // Adding user_id for the API
+      };
+      
       const response = await fetch(url, {
         method: isEditing ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSubmit)
       });
       
       if (!response.ok) {

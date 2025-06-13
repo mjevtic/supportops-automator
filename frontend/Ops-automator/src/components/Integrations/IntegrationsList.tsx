@@ -19,7 +19,10 @@ const IntegrationsList = () => {
       try {
         setLoading(true);
         const API_URL = import.meta.env.VITE_API_URL || '';
-        const response = await fetch(`${API_URL}/integrations`);
+        // For demo purposes, we're using a fixed user ID
+        // In a real app, this would come from authentication
+        const userId = 1;
+        const response = await fetch(`${API_URL}/integrations?user_id=${userId}`);
         
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
