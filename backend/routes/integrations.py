@@ -134,6 +134,8 @@ async def test_integration_connection(integration_type: str, config: dict):
             from modules.zendesk.actions import test_connection
         elif integration_type == "freshdesk":
             from modules.freshdesk.actions import test_connection
+        elif integration_type == "slack":
+            from modules.slack.actions import test_connection
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
