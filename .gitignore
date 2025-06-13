@@ -45,3 +45,4 @@ backend/venv/
 backend/instance/
 backend/scripts/
 error_log.txt
+tasks.md
