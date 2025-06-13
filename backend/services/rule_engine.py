@@ -1,6 +1,6 @@
 import json
-from models.rule import Rule
-from routes.modules import load_action_module
+from backend.models.rule import Rule
+from backend.main import load_action_module
 
 async def process_rule(rule: Rule):
     try:

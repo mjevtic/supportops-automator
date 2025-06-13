@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from db import async_session
-from models.rule import Rule
-from services.rule_engine import process_rule
+from backend.db import async_session
+from backend.models.rule import Rule
+from backend.services import rule_engine
 import json
 
 router = APIRouter()

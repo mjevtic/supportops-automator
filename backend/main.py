@@ -3,9 +3,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from typing import List
 from importlib import import_module
+from backend.routes.rules import router as rules_router
+from backend.routes.webhooks import router as webhook_router
 
-from db import async_session, init_db
-from models import Rule
+from backend.db import async_session, init_db
+from backend.models.rule import Rule
 
 app = FastAPI()
 
@@ -43,7 +45,10 @@ def load_trigger_module(name: str):
 
 def load_action_module(name: str):
     if name == "slack":
-        from modules.slack.action import execute_action
+        from backend.modules.slack.action import execute_action
+        return execute_action
+    if name == "trello":
+        from backend.modules.trello.action import execute_action
         return execute_action
     # Add more action modules here as needed
     raise ValueError(f"Unknown action module: {name}")
@@ -71,7 +76,7 @@ if __name__ == "__main__":
         trigger_platform="zendesk",
         trigger_event="ticket_tag_added",
         trigger_data='{"tag": "urgent"}',
-        actions='[{"platform": "slack", "type": "send_message", "channel": "#support", "message": "Test ticket"}]'
+        actions='[{"platform": "trello", "type": "create_card", "name": "New urgent ticket", "desc": "Ticket #123 from customer with high priority"}]'
     )
 
     import asyncio
