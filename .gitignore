@@ -46,3 +46,7 @@ backend/instance/
 backend/scripts/
 error_log.txt
 tasks.md
+docs/
+.windsurf
+.windsurfrules
+.windsurfrules.md

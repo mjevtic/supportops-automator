@@ -6,6 +6,7 @@ from typing import List
 from importlib import import_module
 from routes.rules import router as rules_router
 from routes.webhooks import router as webhook_router
+from routes.integrations import router as integrations_router
 
 from db import async_session, init_db
 from models.rule import Rule
@@ -24,6 +25,7 @@ app.add_middleware(
 # Include routers
 app.include_router(rules_router, prefix="/rules", tags=["rules"])
 app.include_router(webhook_router, tags=["webhooks"])
+app.include_router(integrations_router, tags=["integrations"])
 
 @app.on_event("startup")
 async def on_startup():
@@ -54,6 +56,9 @@ def load_trigger_module(name: str):
     if name == "zendesk":
         from modules.zendesk.trigger import handle_trigger
         return handle_trigger
+    elif name == "freshdesk":
+        from modules.freshdesk.trigger import handle_trigger
+        return handle_trigger
     # Add more trigger modules here as needed
     raise ValueError(f"Unknown trigger module: {name}")
 
@@ -69,18 +74,11 @@ def load_action_module(name: str):
 
 import json
 
+# This function is now in services/rule_engine.py
+# Keeping this here for backward compatibility
 async def process_rule(rule: Rule):
-    try:
-        actions = json.loads(rule.actions)
-        for action in actions:
-            platform = action.get("platform")
-            if not platform:
-                continue
-            action_fn = load_action_module(platform)
-            result = action_fn(action)
-            print(f"[INFO] Action executed for platform '{platform}':", result)
-    except Exception as e:
-        print("[ERROR] Failed to process rule:", e)
+    from services.rule_engine import process_rule as engine_process_rule
+    await engine_process_rule(rule)
 
 # Optional: Local-only test entry point
 if __name__ == "__main__":

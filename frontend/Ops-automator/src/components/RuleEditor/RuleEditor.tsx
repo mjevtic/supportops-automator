@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Action {
   platform: string;
@@ -46,6 +46,8 @@ const RuleEditor = () => {
   };
 
   const actionPlatformOptions = [
+    { value: 'zendesk', label: 'Zendesk' },
+    { value: 'freshdesk', label: 'Freshdesk' },
     { value: 'slack', label: 'Slack' },
     { value: 'trello', label: 'Trello' },
     { value: 'google_sheets', label: 'Google Sheets' },
@@ -55,6 +57,16 @@ const RuleEditor = () => {
   ];
 
   const actionTypeOptions = {
+    zendesk: [
+      { value: 'create_ticket', label: 'Create Ticket' },
+      { value: 'update_ticket', label: 'Update Ticket' },
+      { value: 'add_comment', label: 'Add Comment' }
+    ],
+    freshdesk: [
+      { value: 'create_ticket', label: 'Create Ticket' },
+      { value: 'update_ticket', label: 'Update Ticket' },
+      { value: 'add_note', label: 'Add Note' }
+    ],
     slack: [{ value: 'send_message', label: 'Send Message' }],
     trello: [{ value: 'create_card', label: 'Create Card' }],
     google_sheets: [{ value: 'append_row', label: 'Append Row' }],
@@ -86,11 +98,40 @@ const RuleEditor = () => {
     });
   };
 
+  const [availableIntegrations, setAvailableIntegrations] = useState<Array<{id: string, name: string, integration_type: string}>>([]);
+  
+  // Fetch available integrations on component mount
+  useEffect(() => {
+    const fetchIntegrations = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || '';
+        const response = await fetch(`${API_URL}/integrations`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableIntegrations(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch integrations:', error);
+      }
+    };
+    
+    fetchIntegrations();
+  }, []);
+
   const handleActionPlatformChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const platform = e.target.value;
+    
+    // Check if this is an integration platform
+    const isIntegrationPlatform = ['zendesk', 'freshdesk'].includes(platform);
+    
+    // Get available integrations of this type
+    const integrationsOfType = availableIntegrations.filter(i => i.integration_type === platform);
+    
     setCurrentAction({
       platform,
       action: actionTypeOptions[platform as keyof typeof actionTypeOptions][0].value,
+      ...(isIntegrationPlatform && integrationsOfType.length > 0 ? { integration_id: integrationsOfType[0].id } : {})
     });
   };
 
@@ -302,6 +343,32 @@ const RuleEditor = () => {
             </select>
           </div>
           
+          {/* Show integration selector for integration platforms */}
+          {['zendesk', 'freshdesk'].includes(currentAction.platform) && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2">Select Integration</label>
+              <select
+                className="shadow border rounded w-full py-2 px-3 text-gray-700"
+                value={currentAction.integration_id || ''}
+                onChange={(e) => setCurrentAction({
+                  ...currentAction,
+                  integration_id: e.target.value
+                })}
+              >
+                {availableIntegrations
+                  .filter(integration => integration.integration_type === currentAction.platform)
+                  .map(integration => (
+                    <option key={integration.id} value={integration.id}>{integration.name}</option>
+                  ))}
+              </select>
+              {availableIntegrations.filter(i => i.integration_type === currentAction.platform).length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  No {currentAction.platform} integrations found. <a href="/integrations/new" className="text-blue-500 underline">Add one first</a>.
+                </p>
+              )}
+            </div>
+          )}
+          
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">Action Parameters (JSON)</label>
             <textarea 
@@ -310,7 +377,15 @@ const RuleEditor = () => {
               onChange={handleActionParamsChange}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Example for Slack: {"{ \"channel\": \"#support\", \"message\": \"New urgent ticket!\" }"}
+              {currentAction.platform === 'zendesk' && currentAction.action === 'create_ticket' && 
+                'Example: { "subject": "New ticket from automation", "description": "This ticket was created automatically" }'
+              }
+              {currentAction.platform === 'freshdesk' && currentAction.action === 'create_ticket' && 
+                'Example: { "subject": "New ticket from automation", "description": "This ticket was created automatically" }'
+              }
+              {currentAction.platform === 'slack' && 
+                'Example: { "channel": "#support", "message": "New urgent ticket!" }'
+              }
             </p>
           </div>
           

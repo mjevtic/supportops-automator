@@ -11,6 +11,7 @@ const Layout = ({ children }: LayoutProps) => {
   const navItems = [
     { path: '/', label: 'Rules' },
     { path: '/create', label: 'Create Rule' },
+    { path: '/integrations', label: 'Integrations' },
     { path: '/webhook-console', label: 'Webhook Console' },
   ];
   
