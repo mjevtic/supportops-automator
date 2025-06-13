@@ -69,7 +69,8 @@ const WebhookConsole = () => {
         throw new Error('Invalid JSON payload');
       }
       
-      const response = await fetch(`/api/trigger/${platform}`, {
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_URL}/trigger/${platform}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

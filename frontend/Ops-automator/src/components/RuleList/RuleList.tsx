@@ -31,7 +31,8 @@ const RuleList = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/rules');
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_URL}/rules`);
       
       if (!response.ok) {
         throw new Error(`Error fetching rules: ${response.statusText}`);
@@ -60,7 +61,8 @@ const RuleList = () => {
     if (deleteId === null) return;
     
     try {
-      const response = await fetch(`/api/rules/${deleteId}`, {
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_URL}/rules/${deleteId}`, {
         method: 'DELETE'
       });
       
@@ -77,10 +79,15 @@ const RuleList = () => {
     }
   };
 
+  interface TriggerData {
+    tag?: string;
+    [key: string]: any;
+  }
+
   const formatTriggerSummary = (rule: Rule) => {
-    let triggerData = {};
+    let triggerData: TriggerData = {};
     try {
-      triggerData = JSON.parse(rule.trigger_data);
+      triggerData = JSON.parse(rule.trigger_data) as TriggerData;
     } catch (e) {
       // Invalid JSON, use empty object
     }

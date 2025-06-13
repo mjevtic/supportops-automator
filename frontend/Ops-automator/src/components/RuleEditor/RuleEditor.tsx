@@ -162,7 +162,8 @@ const RuleEditor = () => {
       setIsSubmitting(true);
       setSubmitResult(null);
       
-      const response = await fetch('/api/rules', {
+      const API_URL = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${API_URL}/rules`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
