@@ -10,6 +10,7 @@ def setup_cors(app: FastAPI):
         "http://localhost:5173",
         "http://localhost:3000",
         "https://supportops-frontend-production.up.railway.app",
+        "https://supportops-backend-production.up.railway.app"
     ]
     
     # Add CORS middleware
