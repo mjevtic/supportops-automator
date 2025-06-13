@@ -10,11 +10,10 @@ from routes.integrations import router as integrations_router
 
 from db import async_session, init_db
 from models.rule import Rule
-from middleware.cors_headers import add_cors_headers
 
 app = FastAPI()
 
-# First add standard CORS middleware
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,9 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Then add our custom CORS headers middleware
-add_cors_headers(app)
 
 # Include routers
 app.include_router(rules_router, prefix="/rules", tags=["rules"])
