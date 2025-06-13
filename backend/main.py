@@ -3,11 +3,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from typing import List
 from importlib import import_module
-from backend.routes.rules import router as rules_router
-from backend.routes.webhooks import router as webhook_router
+from routes.rules import router as rules_router
+from routes.webhooks import router as webhook_router
 
-from backend.db import async_session, init_db
-from backend.models.rule import Rule
+from db import async_session, init_db
+from models.rule import Rule
 
 app = FastAPI()
 

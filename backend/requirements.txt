@@ -3,3 +3,4 @@ uvicorn
 sqlmodel
 asyncpg
 python-dotenv
+requests
