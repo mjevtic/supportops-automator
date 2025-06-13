@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.future import select
 from typing import List
@@ -10,21 +9,12 @@ from routes.integrations import router as integrations_router
 
 from db import async_session, init_db
 from models.rule import Rule
+from middleware.cors import setup_cors
 
 app = FastAPI()
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "*",  # For development
-        "http://localhost:5173",  # Local frontend
-        "https://supportops-frontend-production.up.railway.app",  # Production frontend
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Configure CORS with our custom middleware
+setup_cors(app)
 
 # Include routers
 app.include_router(rules_router, prefix="/rules", tags=["rules"])
