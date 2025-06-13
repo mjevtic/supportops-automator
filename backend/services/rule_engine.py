@@ -20,8 +20,18 @@ async def process_rule(rule: Rule):
             platform = action.get("platform")
             if not platform:
                 continue
+            print(f"[DEBUG] Processing action for platform '{platform}'")
             action_fn = load_action_module(platform)
             result = action_fn(action)
+            print(f"[DEBUG] Raw result type: {type(result)}")
+            print(f"[DEBUG] Raw result content: {result}")
+            
+            # Check if result is a dictionary with a 'message' key containing 'missing scopes'
+            if isinstance(result, dict) and result.get('message') == 'missing scopes':
+                print(f"[DEBUG] Found 'missing scopes' message in result")
+            
             print(f"[INFO] Action executed for platform '{platform}':", result)
     except Exception as e:
         print("[ERROR] Failed to process rule:", e)
+        import traceback
+        traceback.print_exc()
