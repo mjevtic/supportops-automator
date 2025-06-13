@@ -123,7 +123,7 @@ const RuleEditor = () => {
     const platform = e.target.value;
     
     // Check if this is an integration platform
-    const isIntegrationPlatform = ['zendesk', 'freshdesk'].includes(platform);
+    const isIntegrationPlatform = ['zendesk', 'freshdesk', 'slack'].includes(platform);
     
     // Get available integrations of this type
     const integrationsOfType = availableIntegrations.filter(i => i.integration_type === platform);
@@ -344,7 +344,7 @@ const RuleEditor = () => {
           </div>
           
           {/* Show integration selector for integration platforms */}
-          {['zendesk', 'freshdesk'].includes(currentAction.platform) && (
+          {['zendesk', 'freshdesk', 'slack'].includes(currentAction.platform) && (
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2">Select Integration</label>
               <select

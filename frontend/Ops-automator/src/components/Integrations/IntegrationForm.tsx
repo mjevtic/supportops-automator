@@ -24,22 +24,27 @@ const IntegrationForm = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Integration type options
+  // Integration types and their configurations
   const integrationTypes = [
     { value: 'zendesk', label: 'Zendesk' },
-    { value: 'freshdesk', label: 'Freshdesk' }
+    { value: 'freshdesk', label: 'Freshdesk' },
+    { value: 'slack', label: 'Slack' }
   ];
-
-  // Config fields for each integration type
+  
+  // Configuration fields for each integration type
   const configFields = {
     zendesk: [
       { name: 'subdomain', label: 'Subdomain', type: 'text', placeholder: 'your-subdomain' },
       { name: 'email', label: 'Email', type: 'email', placeholder: 'email@example.com' },
-      { name: 'api_token', label: 'API Token', type: 'password', placeholder: 'Enter API token' }
+      { name: 'api_token', label: 'API Token', type: 'password', placeholder: 'Your Zendesk API token' }
     ],
     freshdesk: [
       { name: 'domain', label: 'Domain', type: 'text', placeholder: 'your-domain.freshdesk.com' },
-      { name: 'api_key', label: 'API Key', type: 'password', placeholder: 'Enter API key' }
+      { name: 'api_key', label: 'API Key', type: 'password', placeholder: 'Your Freshdesk API key' }
+    ],
+    slack: [
+      { name: 'webhook_url', label: 'Webhook URL', type: 'text', placeholder: 'https://hooks.slack.com/services/...' },
+      { name: 'default_channel', label: 'Default Channel', type: 'text', placeholder: '#general' }
     ]
   };
 

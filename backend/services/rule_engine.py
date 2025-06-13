@@ -122,6 +122,16 @@ async def execute_integration_action(
                     "success": False,
                     "message": f"Unsupported action type for Freshdesk: {action_type}"
                 }
+        elif platform == "slack":
+            from modules.slack.actions import send_message
+            
+            if action_type == "send_message":
+                return send_message(config, action_data)
+            else:
+                return {
+                    "success": False,
+                    "message": f"Unsupported action type for Slack: {action_type}"
+                }
         else:
             return {
                 "success": False,
@@ -166,6 +176,57 @@ async def process_rule(rule: Rule, session: AsyncSession = None):
                     integration_id,
                     session
                 )
+            elif platform == "slack":
+                # Handle Slack actions using integration from database
+                if not session:
+                    print(f"[ERROR] Database session required for Slack integration actions")
+                    result = {
+                        "success": False,
+                        "message": "Database session required for Slack actions"
+                    }
+                    continue
+                    
+                action_type = action.get("action")
+                integration_id = action.get("integration_id")
+                
+                if not action_type or not integration_id:
+                    print(f"[ERROR] Missing action_type or integration_id for Slack action")
+                    result = {
+                        "success": False,
+                        "message": "Missing action_type or integration_id for Slack action"
+                    }
+                    continue
+                
+                # Get integration from database
+                repository = IntegrationRepository(session)
+                integration = await repository.get_integration(integration_id)
+                
+                if not integration:
+                    result = {
+                        "success": False,
+                        "message": f"Slack integration with ID {integration_id} not found"
+                    }
+                    continue
+                
+                # Get decrypted config
+                config = repository.get_decrypted_config(integration)
+                
+                # Extract parameters from action
+                params = {}
+                for key, value in action.items():
+                    if key not in ["platform", "action", "integration_id"]:
+                        params[key] = value
+                
+                # Import and execute action
+                from modules.slack.actions import send_message
+                
+                if action_type == "send_message":
+                    result = send_message(config, params)
+                else:
+                    result = {
+                        "success": False,
+                        "message": f"Unsupported Slack action: {action_type}"
+                    }
             else:
                 # Handle legacy action modules
                 action_fn = load_action_module(platform)
