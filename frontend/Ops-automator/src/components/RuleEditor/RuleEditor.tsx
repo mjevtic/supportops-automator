@@ -7,6 +7,8 @@ interface Action {
 }
 
 interface Rule {
+  name?: string;
+  description?: string;
   trigger_platform: string;
   trigger_event: string;
   trigger_data: string;
@@ -210,8 +212,12 @@ const RuleEditor = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ...rule,
-          actions: JSON.stringify(rule.actions)
+          name: rule.name || 'New Rule',
+          description: rule.description || '',
+          trigger_platform: rule.trigger_platform,
+          trigger_event: rule.trigger_event,
+          trigger_data: rule.trigger_data,
+          actions: rule.actions
         })
       });
       
