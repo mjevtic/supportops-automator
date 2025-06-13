@@ -16,7 +16,11 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For production, replace with specific frontend URL
+    allow_origins=[
+        "*",  # For development
+        "http://localhost:5173",  # Local frontend
+        "https://supportops-frontend-production.up.railway.app",  # Production frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
