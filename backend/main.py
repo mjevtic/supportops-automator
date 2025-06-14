@@ -22,6 +22,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add global exception handler for CORS on errors
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    response = JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    )
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    return response
+
+
 # Include routers
 app.include_router(rules_router, prefix="/rules", tags=["rules"])
 app.include_router(webhook_router, tags=["webhooks"])
