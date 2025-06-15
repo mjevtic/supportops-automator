@@ -30,13 +30,30 @@ async def get_rules(response: Response, session: AsyncSession = Depends(get_sess
     return add_cors_headers(JSONResponse(content=[rule.dict() for rule in rules]))
 
 import json
+from pydantic import BaseModel
+
+class RuleCreate(BaseModel):
+    user_id: int
+    trigger_platform: str
+    trigger_event: str
+    trigger_data: str
+    actions: list
+    name: str = "New Rule"
+    description: str = ""
 
 @router.post("/rules", response_model=Rule)
-async def create_rule(rule: Rule, response: Response, session: AsyncSession = Depends(get_session)):
-    # Ensure actions is stored as a JSON string
-    if isinstance(rule.actions, list):
-        rule.actions = json.dumps(rule.actions)
-    session.add(rule)
+async def create_rule(rule: RuleCreate, response: Response, session: AsyncSession = Depends(get_session)):
+    # Serialize actions to JSON string for DB
+    db_rule = Rule(
+        user_id=rule.user_id,
+        trigger_platform=rule.trigger_platform,
+        trigger_event=rule.trigger_event,
+        trigger_data=rule.trigger_data,
+        actions=json.dumps(rule.actions),
+        name=rule.name,
+        description=rule.description
+    )
+    session.add(db_rule)
     await session.commit()
-    await session.refresh(rule)
-    return add_cors_headers(JSONResponse(content=rule.dict()))
+    await session.refresh(db_rule)
+    return add_cors_headers(JSONResponse(content=db_rule.dict()))
