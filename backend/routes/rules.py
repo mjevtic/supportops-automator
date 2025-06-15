@@ -29,8 +29,13 @@ async def get_rules(response: Response, session: AsyncSession = Depends(get_sess
     rules = result.scalars().all()
     return add_cors_headers(JSONResponse(content=[rule.dict() for rule in rules]))
 
+import json
+
 @router.post("/rules", response_model=Rule)
 async def create_rule(rule: Rule, response: Response, session: AsyncSession = Depends(get_session)):
+    # Ensure actions is stored as a JSON string
+    if isinstance(rule.actions, list):
+        rule.actions = json.dumps(rule.actions)
     session.add(rule)
     await session.commit()
     await session.refresh(rule)
