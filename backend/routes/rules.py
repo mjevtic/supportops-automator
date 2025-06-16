@@ -33,14 +33,15 @@ class RuleCreate(BaseModel):
 
 @router.post("/rules", response_model=Rule)
 async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_session)):
-    import logging
+    import logging, json
     logging.warning(f"Incoming rule payload: {rule}")
+    actions_str = json.dumps(rule.actions) if not isinstance(rule.actions, str) else rule.actions
     db_rule = Rule(
         user_id=rule.user_id,
         trigger_platform=rule.trigger_platform,
         trigger_event=rule.trigger_event,
         trigger_data=rule.trigger_data,
-        actions=json.dumps(rule.actions),
+        actions=actions_str,
         name=rule.name,
         description=rule.description
     )
