@@ -35,7 +35,13 @@ class RuleCreate(BaseModel):
 async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_session)):
     import logging, json
     logging.warning(f"Incoming rule payload: {rule}")
-    actions_str = json.dumps(rule.actions) if not isinstance(rule.actions, str) else rule.actions
+    actions_val = rule.actions if hasattr(rule, 'actions') else []
+    if not actions_val:
+        actions_str = "[]"
+    elif isinstance(actions_val, str):
+        actions_str = actions_val
+    else:
+        actions_str = json.dumps(actions_val)
     db_rule = Rule(
         user_id=rule.user_id,
         trigger_platform=rule.trigger_platform,
