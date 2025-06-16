@@ -184,7 +184,7 @@ const RuleEditor = () => {
       
       const ruleJson = {
         ...rule,
-        actions: JSON.stringify(rule.actions)
+        actions: rule.actions // keep as array, not string
       };
       
       setJsonPreview(JSON.stringify(ruleJson, null, 2));
@@ -221,7 +221,7 @@ const RuleEditor = () => {
           trigger_platform: rule.trigger_platform,
           trigger_event: rule.trigger_event,
           trigger_data: rule.trigger_data,
-          actions: rule.actions
+          actions: Array.isArray(rule.actions) ? rule.actions : []
         })
       });
       
