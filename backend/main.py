@@ -25,6 +25,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Log incoming request origins for CORS debugging
+@app.middleware("http")
+async def log_origin(request, call_next):
+    origin = request.headers.get("origin")
+    print(f"Request from origin: {origin}")
+    response = await call_next(request)
+    return response
+
+
 
 
 # Include routers
