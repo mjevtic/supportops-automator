@@ -74,21 +74,58 @@ async def get_rule(rule_id: int, session: AsyncSession = Depends(get_session)):
 
 @router.put("/{rule_id}", response_model=Rule)
 async def update_rule(rule_id: int, rule_update: RuleUpdate, session: AsyncSession = Depends(get_session)):
+    import logging # Ensure logging is imported
+    # Ensure json is imported if it's used and not at top-level of file already (it is in this file)
+    logging.warning(f"--- Updating rule ID: {rule_id} ---")
+    logging.warning(f"Received rule_update payload (exclude_unset=False to see all fields from model): {rule_update.dict(exclude_unset=False)}")
+    logging.warning(f"Received rule_update payload (exclude_none=True to see only provided non-null fields): {rule_update.dict(exclude_none=True)}")
     db_rule = await session.get(Rule, rule_id)
     if not db_rule:
+        logging.error(f"Rule {rule_id} not found for update.")
         return JSONResponse(status_code=404, content={"message": "Rule not found"})
     
-    update_data = rule_update.dict(exclude_unset=True)
-    
-    if 'actions' in update_data and update_data['actions'] is not None:
-        update_data['actions'] = json.dumps(update_data['actions'])
+    logging.warning(f"DB rule.actions BEFORE any update: {db_rule.actions}")
+    logging.warning(f"DB rule full object BEFORE any update: {db_rule.dict()}")
 
+    update_data = rule_update.dict(exclude_unset=True)
+    logging.warning(f"Update_data (from rule_update.dict(exclude_unset=True)): {update_data}")
+    
+    if 'actions' in update_data:
+        logging.warning(f"'actions' field IS PRESENT in update_data. Value: {update_data['actions']}, Type: {type(update_data['actions'])}")
+        if update_data['actions'] is not None:
+            # This is where the list of actions should be converted to a JSON string
+            actions_as_json_string = json.dumps(update_data['actions'])
+            update_data['actions'] = actions_as_json_string # Modify update_data to hold the string for the loop below
+            logging.warning(f"Converted 'actions' to JSON string for storage: {actions_as_json_string}")
+        else:
+            # If 'actions' was explicitly passed as null in the payload
+            logging.warning(f"'actions' field in update_data is None. It will be set as null/None on db_rule if 'actions' key is iterated.")
+            # SQLModel/SQLAlchemy might store this as Python None, which becomes SQL NULL.
+            # For a string field, storing '[]' for empty or 'null' string might be preferable.
+            # Let's ensure it's a string if the db field is string.
+            update_data['actions'] = "[]" # Default to empty JSON array string if payload sends null for actions
+            logging.warning(f"'actions' was None in payload, will store as '[]'.")
+    else:
+        logging.warning(f"'actions' field IS NOT PRESENT in update_data (was not in PUT request or was default). db_rule.actions will not be changed by this update.")
+
+    # Apply all changes from update_data to db_rule
     for key, value in update_data.items():
-        setattr(db_rule, key, value)
+        if hasattr(db_rule, key):
+            setattr(db_rule, key, value)
+            logging.warning(f"Set db_rule.{key} = {repr(value)}")
+        else:
+            logging.warning(f"Attempted to set unknown attribute {key} on db_rule.")
+    
+    logging.warning(f"DB rule.actions JUST BEFORE commit: {db_rule.actions}")
+    logging.warning(f"Full db_rule object JUST BEFORE commit: {db_rule.dict()}")
     
     session.add(db_rule)
     await session.commit()
     await session.refresh(db_rule)
+
+    logging.warning(f"DB rule.actions AFTER commit and refresh: {db_rule.actions}")
+    logging.warning(f"Full db_rule object AFTER commit and refresh: {db_rule.dict()}")
+    logging.warning(f"--- Finished updating rule ID: {rule_id} ---")
     return db_rule
 
 @router.delete("/{rule_id}")
