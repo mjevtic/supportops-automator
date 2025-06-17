@@ -39,17 +39,24 @@ class RuleUpdate(BaseModel):
     trigger_data: Optional[str] = None
     actions: Optional[list] = None
 
-@router.post("/", response_model=Rule)  # Changed from "/rules" to "/"
+@router.post("/", response_model=Rule)
 async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_session)):
     import logging, json
-    logging.warning(f"Incoming rule payload: {rule}")
+    logging.warning(f"--- Creating new rule ---")
+    logging.warning(f"Received rule_create payload: {rule.dict()}")
+    
     actions_val = rule.actions if hasattr(rule, 'actions') else []
+    logging.warning(f"Actions value from payload: {actions_val}, Type: {type(actions_val)}")
+
     if not actions_val:
         actions_str = "[]"
     elif isinstance(actions_val, str):
-        actions_str = actions_val
+        actions_str = actions_val # Should not happen with Pydantic list type
     else:
         actions_str = json.dumps(actions_val)
+    
+    logging.warning(f"Actions converted to JSON string for DB: {actions_str}")
+
     db_rule = Rule(
         user_id=rule.user_id,
         name=rule.name,
@@ -59,10 +66,15 @@ async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_sess
         trigger_data=rule.trigger_data,
         actions=actions_str
     )
+    
+    logging.warning(f"Rule object to be saved: {db_rule.dict()}")
+
     session.add(db_rule)
     await session.commit()
     await session.refresh(db_rule)
-    logging.warning(f"Saved rule to DB: {db_rule}")
+    
+    logging.warning(f"Rule object AFTER saving to DB and refreshing: {db_rule.dict()}")
+    logging.warning(f"--- Finished creating rule ---")
     return db_rule
 
 @router.get("/{rule_id}", response_model=Rule)

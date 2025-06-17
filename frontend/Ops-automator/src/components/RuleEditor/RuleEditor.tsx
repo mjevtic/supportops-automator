@@ -20,6 +20,7 @@ const RuleEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
+
   const [rule, setRule] = useState<Rule>({
     name: '',
     description: '',
@@ -34,8 +35,8 @@ const RuleEditor = () => {
     action: 'send_message',
   });
 
-  const [jsonPreview, setJsonPreview] = useState<string>('');
-  const [showPreview, setShowPreview] = useState(false);
+  const [actionParams, setActionParams] = useState('{}');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -44,7 +45,7 @@ const RuleEditor = () => {
     { value: 'freshdesk', label: 'Freshdesk' }
   ];
 
-  const eventOptions = {
+  const eventOptions: { [key: string]: { value: string; label: string }[] } = {
     zendesk: [
       { value: 'ticket_tag_added', label: 'Ticket Tag Added' }
     ],
@@ -64,7 +65,7 @@ const RuleEditor = () => {
     { value: 'discord', label: 'Discord' }
   ];
 
-  const actionTypeOptions = {
+  const actionTypeOptions: { [key: string]: { value: string; label: string }[] } = {
     zendesk: [
       { value: 'create_ticket', label: 'Create Ticket' },
       { value: 'update_ticket', label: 'Update Ticket' },
@@ -83,31 +84,8 @@ const RuleEditor = () => {
     discord: [{ value: 'send_message', label: 'Send Message' }]
   };
 
-  const handleTriggerPlatformChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const platform = e.target.value;
-    setRule({
-      ...rule,
-      trigger_platform: platform,
-      trigger_event: eventOptions[platform as keyof typeof eventOptions][0].value
-    });
-  };
-
-  const handleTriggerEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRule({
-      ...rule,
-      trigger_event: e.target.value
-    });
-  };
-
-  const handleTriggerDataChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setRule({
-      ...rule,
-      trigger_data: e.target.value
-    });
-  };
-
   const [availableIntegrations, setAvailableIntegrations] = useState<Array<{id: string, name: string, integration_type: string}>>([]);
-  
+
   useEffect(() => {
     if (isEditing) {
       const fetchRule = async () => {
@@ -116,9 +94,13 @@ const RuleEditor = () => {
           const response = await fetch(`${API_URL}/rules/${id}`);
           if (response.ok) {
             const data = await response.json();
-            // Actions might be a string, parse it
             if (typeof data.actions === 'string') {
-              data.actions = JSON.parse(data.actions);
+              try {
+                data.actions = JSON.parse(data.actions);
+              } catch (e) {
+                console.error("Failed to parse actions string:", e);
+                data.actions = [];
+              }
             }
             setRule(data);
           } else {
@@ -135,7 +117,6 @@ const RuleEditor = () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
         const response = await fetch(`${API_URL}/integrations`);
-        
         if (response.ok) {
           const data = await response.json();
           setAvailableIntegrations(data);
@@ -147,96 +128,80 @@ const RuleEditor = () => {
     
     fetchIntegrations();
   }, [id, isEditing]);
-    
 
+  const handleTriggerPlatformChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const platform = e.target.value;
+    setRule({
+      ...rule,
+      trigger_platform: platform,
+      trigger_event: eventOptions[platform][0].value
+    });
+  };
+
+  const handleTriggerEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setRule({ ...rule, trigger_event: e.target.value });
+  };
+
+  const handleTriggerDataChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setRule({ ...rule, trigger_data: e.target.value });
+  };
 
   const handleActionPlatformChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const platform = e.target.value;
-    
-    // Check if this is an integration platform
     const isIntegrationPlatform = ['zendesk', 'freshdesk', 'slack'].includes(platform);
-    
-    // Get available integrations of this type
     const integrationsOfType = availableIntegrations.filter(i => i.integration_type === platform);
     
     setCurrentAction({
       platform,
-      action: actionTypeOptions[platform as keyof typeof actionTypeOptions][0].value,
+      action: actionTypeOptions[platform][0].value,
       ...(isIntegrationPlatform && integrationsOfType.length > 0 ? { integration_id: integrationsOfType[0].id } : {})
     });
+    setActionParams('{}');
   };
 
   const handleActionTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCurrentAction({
-      ...currentAction,
-      action: e.target.value
-    });
+    setCurrentAction({ ...currentAction, action: e.target.value });
+    setActionParams('{}');
   };
 
   const handleActionParamsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    try {
-      const params = JSON.parse(e.target.value);
-      setCurrentAction({
-        ...currentAction,
-        ...params
-      });
-    } catch (error) {
-      // Invalid JSON, ignore for now
-    }
+    setActionParams(e.target.value);
   };
 
   const addAction = () => {
-    setRule({
-      ...rule,
-      actions: [...rule.actions, currentAction]
-    });
-    // Reset current action to default
-    setCurrentAction({
-      platform: 'slack',
-      action: 'send_message',
-    });
+    try {
+      const params = JSON.parse(actionParams || '{}');
+      const newAction = { ...currentAction, ...params };
+      setRule({ ...rule, actions: [...rule.actions, newAction] });
+      setCurrentAction({ platform: 'slack', action: 'send_message' });
+      setActionParams('{}');
+    } catch (error) {
+      alert('Invalid JSON in action parameters.');
+    }
   };
 
   const removeAction = (index: number) => {
     const newActions = [...rule.actions];
     newActions.splice(index, 1);
-    setRule({
-      ...rule,
-      actions: newActions
-    });
-  };
-
-  const generatePreview = () => {
-    try {
-      // Validate trigger data is valid JSON
-      JSON.parse(rule.trigger_data);
-      
-      const ruleJson = {
-        ...rule,
-        actions: rule.actions // keep as array, not string
-      };
-      
-      setJsonPreview(JSON.stringify(ruleJson, null, 2));
-      setShowPreview(true);
-    } catch (error) {
-      setSubmitResult({
-        success: false,
-        message: 'Invalid JSON in trigger data'
-      });
-    }
+    setRule({ ...rule, actions: newActions });
   };
 
   const handleSubmit = async () => {
     const API_URL = import.meta.env.VITE_API_URL || '';
     const url = isEditing ? `${API_URL}/rules/${id}` : `${API_URL}/rules/`;
     const method = isEditing ? 'PUT' : 'POST';
+
     try {
-      // Validate trigger data is valid JSON
       JSON.parse(rule.trigger_data);
-      
-      setIsSubmitting(true);
-      setSubmitResult(null);
-      
+    } catch (error) {
+      setSubmitResult({ success: false, message: 'Invalid JSON in trigger data.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitResult(null);
+
+    try {
       const response = await fetch(url, {
         method,
         mode: 'cors',
@@ -247,7 +212,7 @@ const RuleEditor = () => {
           'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
-          user_id: 1, // TODO: Replace with actual user ID from auth
+          user_id: 1,
           name: rule.name || 'New Rule',
           description: rule.description || '',
           trigger_platform: rule.trigger_platform,
@@ -260,25 +225,15 @@ const RuleEditor = () => {
       const data = await response.json();
       
       if (response.ok) {
-        setSubmitResult({
-          success: true,
-          message: `Rule ${isEditing ? 'updated' : 'created'} successfully!`
-        });
+        setSubmitResult({ success: true, message: `Rule ${isEditing ? 'updated' : 'created'} successfully!` });
         setTimeout(() => navigate('/'), 2000);
       } else {
-        setSubmitResult({
-          success: false,
-          message: `Error: ${data.detail || `Failed to ${isEditing ? 'update' : 'create'} rule`}`
-        });
+        setSubmitResult({ success: false, message: `Error: ${data.detail || `Failed to ${isEditing ? 'update' : 'create'} rule`}` });
       }
     } catch (error) {
-      setSubmitResult({
-        success: false,
-        message: 'Invalid JSON in trigger data or actions'
-      });
+      setSubmitResult({ success: false, message: 'An unexpected error occurred.' });
     } finally {
       setIsSubmitting(false);
-      setShowPreview(false);
     }
   };
 
@@ -309,30 +264,31 @@ const RuleEditor = () => {
 
         <h2 className="text-xl font-semibold mb-4">Trigger</h2>
         
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">Platform</label>
-          <select 
-            className="shadow border rounded w-full py-2 px-3 text-gray-700"
-            value={rule.trigger_platform}
-            onChange={handleTriggerPlatformChange}
-          >
-            {platformOptions.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">Event</label>
-          <select 
-            className="shadow border rounded w-full py-2 px-3 text-gray-700"
-            value={rule.trigger_event}
-            onChange={handleTriggerEventChange}
-          >
-            {eventOptions[rule.trigger_platform as keyof typeof eventOptions]?.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-gray-700 text-sm font-bold mb-2">Platform</label>
+            <select 
+              className="shadow border rounded w-full py-2 px-3 text-gray-700"
+              value={rule.trigger_platform}
+              onChange={handleTriggerPlatformChange}
+            >
+              {platformOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-bold mb-2">Event</label>
+            <select 
+              className="shadow border rounded w-full py-2 px-3 text-gray-700"
+              value={rule.trigger_event}
+              onChange={handleTriggerEventChange}
+            >
+              {eventOptions[rule.trigger_platform]?.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
         
         <div className="mb-4">
@@ -342,7 +298,7 @@ const RuleEditor = () => {
             value={rule.trigger_data}
             onChange={handleTriggerDataChange}
           />
-          <p className="text-xs text-gray-500 mt-1">Example: {"{ \"tag\": \"urgent\" }"}</p>
+          <p className="text-xs text-gray-500 mt-1">Example: {`{ "tag": "urgent" }`}</p>
         </div>
       </div>
       
@@ -354,12 +310,13 @@ const RuleEditor = () => {
             <h3 className="text-lg font-medium mb-2">Current Actions</h3>
             <ul className="divide-y divide-gray-200">
               {rule.actions.map((action, index) => (
-                <li key={index} className="py-3 flex justify-between">
+                <li key={index} className="py-3 flex justify-between items-center">
                   <div>
-                    <span className="font-medium">{action.platform}</span>: {action.action}
+                    <p><span className="font-medium">{action.platform}</span>: {action.action}</p>
+                    <p className="text-xs text-gray-500 font-mono">{JSON.stringify(action, null, 2)}</p>
                   </div>
                   <button 
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 font-semibold py-1 px-3 rounded"
                     onClick={() => removeAction(index)}
                   >
                     Remove
@@ -370,81 +327,46 @@ const RuleEditor = () => {
           </div>
         )}
         
-        <div className="bg-gray-50 p-4 rounded-md">
+        <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
           <h3 className="text-lg font-medium mb-3">Add New Action</h3>
           
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Platform</label>
-            <select 
-              className="shadow border rounded w-full py-2 px-3 text-gray-700"
-              value={currentAction.platform}
-              onChange={handleActionPlatformChange}
-            >
-              {actionPlatformOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Action Type</label>
-            <select 
-              className="shadow border rounded w-full py-2 px-3 text-gray-700"
-              value={currentAction.action}
-              onChange={handleActionTypeChange}
-            >
-              {actionTypeOptions[currentAction.platform as keyof typeof actionTypeOptions]?.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Show integration selector for integration platforms */}
-          {['zendesk', 'freshdesk', 'slack'].includes(currentAction.platform) && (
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">Select Integration</label>
-              <select
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2">Platform</label>
+              <select 
                 className="shadow border rounded w-full py-2 px-3 text-gray-700"
-                value={currentAction.integration_id || ''}
-                onChange={(e) => setCurrentAction({
-                  ...currentAction,
-                  integration_id: e.target.value
-                })}
+                value={currentAction.platform}
+                onChange={handleActionPlatformChange}
               >
-                {availableIntegrations
-                  .filter(integration => integration.integration_type === currentAction.platform)
-                  .map(integration => (
-                    <option key={integration.id} value={integration.id}>{integration.name}</option>
-                  ))}
+                {actionPlatformOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
-              {availableIntegrations.filter(i => i.integration_type === currentAction.platform).length === 0 && (
-                <p className="text-xs text-red-500 mt-1">
-                  No {currentAction.platform} integrations found. <a href="/integrations/new" className="text-blue-500 underline">Add one first</a>.
-                </p>
-              )}
             </div>
-          )}
-          
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2">Action Type</label>
+              <select 
+                className="shadow border rounded w-full py-2 px-3 text-gray-700"
+                value={currentAction.action}
+                onChange={handleActionTypeChange}
+              >
+                {actionTypeOptions[currentAction.platform]?.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">Action Parameters (JSON)</label>
             <textarea 
-              className="shadow border rounded w-full py-2 px-3 text-gray-700 font-mono text-sm h-32"
-              placeholder="Enter action parameters as JSON"
+              className="shadow border rounded w-full py-2 px-3 text-gray-700 font-mono text-sm h-24"
+              placeholder='e.g., { "channel": "#general", "text": "Hello" }'
+              value={actionParams}
               onChange={handleActionParamsChange}
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {currentAction.platform === 'zendesk' && currentAction.action === 'create_ticket' && 
-                'Example: { "subject": "New ticket from automation", "description": "This ticket was created automatically" }'
-              }
-              {currentAction.platform === 'freshdesk' && currentAction.action === 'create_ticket' && 
-                'Example: { "subject": "New ticket from automation", "description": "This ticket was created automatically" }'
-              }
-              {currentAction.platform === 'slack' && 
-                'Example: { "channel": "#support", "message": "New urgent ticket!" }'
-              }
-            </p>
           </div>
-          
+
           <button 
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             onClick={addAction}
@@ -453,38 +375,22 @@ const RuleEditor = () => {
           </button>
         </div>
       </div>
-      
-      <div className="flex justify-between">
-        <button 
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-          onClick={generatePreview}
-        >
-          Preview JSON
-        </button>
-        
-        <button 
-          className={`bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Submitting...' : 'Create Rule'}
-        </button>
-      </div>
-      
-      {showPreview && (
-        <div className="mt-6 bg-gray-100 p-4 rounded-md">
-          <h3 className="text-lg font-medium mb-2">JSON Preview</h3>
-          <pre className="bg-gray-800 text-green-300 p-4 rounded overflow-x-auto text-sm">
-            {jsonPreview}
-          </pre>
-        </div>
-      )}
-      
+
       {submitResult && (
-        <div className={`mt-6 p-4 rounded-md ${submitResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <div className={`p-4 mb-4 rounded ${submitResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
           {submitResult.message}
         </div>
       )}
+
+      <div className="flex justify-end">
+        <button 
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Saving...' : (isEditing ? 'Update Rule' : 'Create Rule')}
+        </button>
+      </div>
     </div>
   );
 };
