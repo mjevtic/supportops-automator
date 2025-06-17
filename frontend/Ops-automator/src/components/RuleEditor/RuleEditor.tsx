@@ -216,6 +216,7 @@ const RuleEditor = () => {
           'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
+          user_id: 1, // TODO: Replace with actual user ID from auth
           name: rule.name || 'New Rule',
           description: rule.description || '',
           trigger_platform: rule.trigger_platform,
