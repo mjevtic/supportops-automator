@@ -32,7 +32,7 @@ const RuleList = () => {
       setError(null);
       
       const API_URL = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${API_URL}/rules`);
+            const response = await fetch(`${API_URL}/rules/`);
       
       if (!response.ok) {
         throw new Error(`Error fetching rules: ${response.statusText}`);

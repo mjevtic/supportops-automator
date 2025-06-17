@@ -206,7 +206,7 @@ const RuleEditor = () => {
       setSubmitResult(null);
       
       const API_URL = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${API_URL}/rules`, {
+            const response = await fetch(`${API_URL}/rules/`, {
         method: 'POST',
         mode: 'cors',
         credentials: 'include',
