@@ -13,7 +13,7 @@ async def get_session():
     async with async_session() as session:
         yield session
 
-@router.get("/rules", response_model=List[Rule])
+@router.get("/", response_model=List[Rule])  # Changed from "/rules" to "/"
 async def get_rules(session: AsyncSession = Depends(get_session)):
     result = await session.execute(select(Rule))
     rules = result.scalars().all()
@@ -31,7 +31,7 @@ class RuleCreate(BaseModel):
     name: str = "New Rule"
     description: str = ""
 
-@router.post("/rules", response_model=Rule)
+@router.post("/", response_model=Rule)  # Changed from "/rules" to "/"
 async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_session)):
     import logging, json
     logging.warning(f"Incoming rule payload: {rule}")
