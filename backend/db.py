@@ -14,7 +14,6 @@ async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False
 
 async def init_db():
     async with engine.begin() as conn:
-        # Drop all tables
-        await conn.run_sync(SQLModel.metadata.drop_all)
-        # Create all tables
+        # Create all tables if they don't exist
+        # For schema changes, a proper migration tool (e.g., Alembic) should be used.
         await conn.run_sync(SQLModel.metadata.create_all)
