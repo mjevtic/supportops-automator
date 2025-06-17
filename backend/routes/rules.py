@@ -4,7 +4,7 @@ from sqlalchemy.future import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from db import async_session
 from models.rule import Rule
-from typing import List
+from typing import List, Optional
 
 router = APIRouter()
 
@@ -31,6 +31,14 @@ class RuleCreate(BaseModel):
     name: str = "New Rule"
     description: str = ""
 
+class RuleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    trigger_platform: Optional[str] = None
+    trigger_event: Optional[str] = None
+    trigger_data: Optional[str] = None
+    actions: Optional[list] = None
+
 @router.post("/", response_model=Rule)  # Changed from "/rules" to "/"
 async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_session)):
     import logging, json
@@ -44,15 +52,51 @@ async def create_rule(rule: RuleCreate, session: AsyncSession = Depends(get_sess
         actions_str = json.dumps(actions_val)
     db_rule = Rule(
         user_id=rule.user_id,
+        name=rule.name,
+        description=rule.description,
         trigger_platform=rule.trigger_platform,
         trigger_event=rule.trigger_event,
         trigger_data=rule.trigger_data,
-        actions=actions_str,
-        name=rule.name,
-        description=rule.description
+        actions=actions_str
     )
     session.add(db_rule)
     await session.commit()
     await session.refresh(db_rule)
     logging.warning(f"Saved rule to DB: {db_rule}")
     return db_rule
+
+@router.get("/{rule_id}", response_model=Rule)
+async def get_rule(rule_id: int, session: AsyncSession = Depends(get_session)):
+    rule = await session.get(Rule, rule_id)
+    if not rule:
+        return JSONResponse(status_code=404, content={"message": "Rule not found"})
+    return rule
+
+@router.put("/{rule_id}", response_model=Rule)
+async def update_rule(rule_id: int, rule_update: RuleUpdate, session: AsyncSession = Depends(get_session)):
+    db_rule = await session.get(Rule, rule_id)
+    if not db_rule:
+        return JSONResponse(status_code=404, content={"message": "Rule not found"})
+    
+    update_data = rule_update.dict(exclude_unset=True)
+    
+    if 'actions' in update_data and update_data['actions'] is not None:
+        update_data['actions'] = json.dumps(update_data['actions'])
+
+    for key, value in update_data.items():
+        setattr(db_rule, key, value)
+    
+    session.add(db_rule)
+    await session.commit()
+    await session.refresh(db_rule)
+    return db_rule
+
+@router.delete("/{rule_id}")
+async def delete_rule(rule_id: int, session: AsyncSession = Depends(get_session)):
+    rule = await session.get(Rule, rule_id)
+    if not rule:
+        return JSONResponse(status_code=404, content={"message": "Rule not found"})
+    
+    await session.delete(rule)
+    await session.commit()
+    return Response(status_code=204)

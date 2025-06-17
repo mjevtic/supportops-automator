@@ -13,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<RuleList />} />
           <Route path="/create" element={<RuleEditor />} />
+          <Route path="/edit/:id" element={<RuleEditor />} />
           <Route path="/webhook-console" element={<WebhookConsole />} />
           <Route path="/integrations" element={<IntegrationsList />} />
           <Route path="/integrations/new" element={<IntegrationForm />} />

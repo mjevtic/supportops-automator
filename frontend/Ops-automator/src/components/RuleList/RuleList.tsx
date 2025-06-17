@@ -8,10 +8,12 @@ interface Action {
 
 interface Rule {
   id: number;
+  name: string;
+  description: string;
   trigger_platform: string;
   trigger_event: string;
   trigger_data: string;
-  actions: string;
+  actions: string | Action[];
   created_at: string;
 }
 
@@ -103,14 +105,18 @@ const RuleList = () => {
 
   const formatActionsSummary = (rule: Rule) => {
     let actions: Action[] = [];
-    try {
-      actions = JSON.parse(rule.actions);
-    } catch (e) {
-      return 'No actions or invalid format';
+    if (typeof rule.actions === 'string') {
+        try {
+          actions = JSON.parse(rule.actions);
+        } catch (e) {
+          return 'Invalid actions format';
+        }
+    } else if (Array.isArray(rule.actions)) {
+        actions = rule.actions;
     }
     
-    if (!actions.length) {
-      return 'No actions';
+    if (!actions || actions.length === 0) {
+      return 'No actions defined';
     }
     
     return actions.map((action, index) => {
@@ -162,7 +168,7 @@ const RuleList = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
+                  Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Trigger
@@ -179,7 +185,7 @@ const RuleList = () => {
               {rules.map(rule => (
                 <tr key={rule.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {rule.id}
+                    {rule.name}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {formatTriggerSummary(rule)}
@@ -188,6 +194,9 @@ const RuleList = () => {
                     {formatActionsSummary(rule)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a href={`/edit/${rule.id}`} className="text-indigo-600 hover:text-indigo-900">
+                      Edit
+                    </a>
                     <button 
                       className="text-red-600 hover:text-red-900 ml-4"
                       onClick={() => confirmDelete(rule.id)}

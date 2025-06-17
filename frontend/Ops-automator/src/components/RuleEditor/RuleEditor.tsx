@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 
 interface Action {
   platform: string;
@@ -16,7 +17,12 @@ interface Rule {
 }
 
 const RuleEditor = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const isEditing = Boolean(id);
   const [rule, setRule] = useState<Rule>({
+    name: '',
+    description: '',
     trigger_platform: 'zendesk',
     trigger_event: 'ticket_tag_added',
     trigger_data: JSON.stringify({ tag: '' }, null, 2),
@@ -102,8 +108,29 @@ const RuleEditor = () => {
 
   const [availableIntegrations, setAvailableIntegrations] = useState<Array<{id: string, name: string, integration_type: string}>>([]);
   
-  // Fetch available integrations on component mount
   useEffect(() => {
+    if (isEditing) {
+      const fetchRule = async () => {
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || '';
+          const response = await fetch(`${API_URL}/rules/${id}`);
+          if (response.ok) {
+            const data = await response.json();
+            // Actions might be a string, parse it
+            if (typeof data.actions === 'string') {
+              data.actions = JSON.parse(data.actions);
+            }
+            setRule(data);
+          } else {
+            console.error('Failed to fetch rule for editing');
+          }
+        } catch (error) {
+          console.error('Error fetching rule:', error);
+        }
+      };
+      fetchRule();
+    }
+
     const fetchIntegrations = async () => {
       try {
         const API_URL = import.meta.env.VITE_API_URL || '';
@@ -119,7 +146,9 @@ const RuleEditor = () => {
     };
     
     fetchIntegrations();
-  }, []);
+  }, [id, isEditing]);
+    
+
 
   const handleActionPlatformChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const platform = e.target.value;
@@ -198,6 +227,9 @@ const RuleEditor = () => {
   };
 
   const handleSubmit = async () => {
+    const API_URL = import.meta.env.VITE_API_URL || '';
+    const url = isEditing ? `${API_URL}/rules/${id}` : `${API_URL}/rules/`;
+    const method = isEditing ? 'PUT' : 'POST';
     try {
       // Validate trigger data is valid JSON
       JSON.parse(rule.trigger_data);
@@ -205,9 +237,8 @@ const RuleEditor = () => {
       setIsSubmitting(true);
       setSubmitResult(null);
       
-      const API_URL = import.meta.env.VITE_API_URL || '';
-            const response = await fetch(`${API_URL}/rules/`, {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         mode: 'cors',
         credentials: 'include',
         headers: {
@@ -231,19 +262,13 @@ const RuleEditor = () => {
       if (response.ok) {
         setSubmitResult({
           success: true,
-          message: 'Rule created successfully!'
+          message: `Rule ${isEditing ? 'updated' : 'created'} successfully!`
         });
-        // Reset form
-        setRule({
-          trigger_platform: 'zendesk',
-          trigger_event: 'ticket_tag_added',
-          trigger_data: JSON.stringify({ tag: '' }, null, 2),
-          actions: []
-        });
+        setTimeout(() => navigate('/'), 2000);
       } else {
         setSubmitResult({
           success: false,
-          message: `Error: ${data.detail || 'Failed to create rule'}`
+          message: `Error: ${data.detail || `Failed to ${isEditing ? 'update' : 'create'} rule`}`
         });
       }
     } catch (error) {
@@ -259,9 +284,29 @@ const RuleEditor = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">Create New Rule</h1>
+      <h1 className="text-2xl font-bold mb-6">{isEditing ? 'Edit Rule' : 'Create New Rule'}</h1>
       
       <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">Rule Name</label>
+          <input 
+            type="text"
+            className="shadow border rounded w-full py-2 px-3 text-gray-700"
+            value={rule.name || ''}
+            onChange={(e) => setRule({...rule, name: e.target.value})}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">Description</label>
+          <input 
+            type="text"
+            className="shadow border rounded w-full py-2 px-3 text-gray-700"
+            value={rule.description || ''}
+            onChange={(e) => setRule({...rule, description: e.target.value})}
+          />
+        </div>
+
         <h2 className="text-xl font-semibold mb-4">Trigger</h2>
         
         <div className="mb-4">
